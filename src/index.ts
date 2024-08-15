@@ -2,7 +2,7 @@ import { runApp } from "./tea.js"
 // app config
 const config = {
   canvas: { widthPx: 1000, heightPx: 800 },
-  playerVelocityPxPerMs: 1/1000 * 100,
+  playerVelocityPxPerMs: 1/1000 * 200,
   debug: true,
 }
 
@@ -29,11 +29,13 @@ function decodeKey(key: string): Key | null {
 // State
 type State = {
   player: Player,
+  obstacles: Obstacle[],
   keyboard: Keyboard,
 }
 
 const initState: State = {
-  player: { position: { x: 10, y: 10 } },
+  player: { position: { x: 500, y: 700 } },
+  obstacles: [ { x: 0, y: config.canvas.heightPx - 10, width: config.canvas.widthPx, height: 10 }],
   keyboard: {
     up_pressed: false,
     down_pressed: false,
@@ -43,6 +45,32 @@ const initState: State = {
 }
 
 type Player = { position: Point }
+
+type Point = { x: number, y: number }
+
+type Obstacle = Rectangle
+
+type Rectangle = Point & { width: number, height: number }
+
+// detectCollision(r1,r2)
+//   0:
+//             r1      r2
+//       ----[----]--[----]---- (+)
+//   1:
+//             r1      r2
+//       ----[----|----]----    (+)
+//
+//            r1    r2
+//       ----[--[-]--]----      (+)
+//
+//  -1:
+//            r2    r1
+//       ----[--[-]--]----      (+)
+type RectangleCollision = { x }
+
+function detectCollision(r1: Rectangle, r2: Rectangle) {
+
+}
 
 type Keyboard = {
   up_pressed: boolean,
@@ -62,9 +90,6 @@ function update(state: State, action:Action): State {
   config.debug && action.kind !== "tick" && console.log(action)
 
   switch (action.kind) {
-    // case "key_pressed":
-    //   return updatePlayerPosition(state, computePlayerPostion(state, action.key))
-
     case "key_released":
       switch (action.key) {
         case "w": return setKeyboard(state, {...state.keyboard, up_pressed: false})
@@ -72,8 +97,7 @@ function update(state: State, action:Action): State {
         case "d": return setKeyboard(state, {...state.keyboard, right_pressed: false})
         case "s": return setKeyboard(state, {...state.keyboard, down_pressed: false})
       }
-      // return updatePlayerPosition(state, computePlayerPostion(state, action.key))
-      // return updateKeyboard
+
     case "key_pressed":
       switch (action.key) {
         case "w": return setKeyboard(state, {...state.keyboard, up_pressed: true})
@@ -120,26 +144,6 @@ function setKeyboard(state: State, keyboard: Keyboard): State {
   return { ...state, keyboard }
 }
 
-type Point = { x: number, y: number }
-function computePlayerPostion(state: State, key: Key): Point {
-  // TODO: collision etc. based on sate
-  const position = state.player.position
-
-  switch (key) {
-    case "w":
-      return { x: position.x, y: position.y - 5 }
-
-    case "a":
-      return { x: position.x - 5, y: position.y }
-
-    case "s":
-      return { x: position.x, y: position.y + 5 }
-
-    case "d":
-      return { x: position.x + 5, y: position.y }
-  }
-}
-
 // Render
 // setup canvas
 const canvas = document.createElement("canvas")
@@ -158,6 +162,7 @@ function render(state: State) {
     ctx.clearRect(0, 0, config.canvas.widthPx, config.canvas.heightPx)
 
     renderPlayer(ctx, state.player)
+    state.obstacles.forEach(o => renderObstacle(ctx, o))
 
   } else {
     console.error("getContext returned null")
@@ -166,6 +171,10 @@ function render(state: State) {
 
 function renderPlayer(ctx: CanvasRenderingContext2D ,player: Player) {
   ctx.fillRect(player.position.x, player.position.y, 50, 50)
+}
+
+function renderObstacle(ctx: CanvasRenderingContext2D, obstacle: Obstacle) {
+  ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height)
 }
 
 // App
