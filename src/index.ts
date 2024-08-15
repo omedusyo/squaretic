@@ -2,6 +2,7 @@ import { runApp } from "./tea.js"
 // app config
 const config = {
   canvas: { widthPx: 1000, heightPx: 800 },
+  playerVelocityPxPerMs: 1/1000 * 100,
   debug: true,
 }
 
@@ -43,35 +44,47 @@ type Action
 
 // Update
 function update(state: State, action:Action): State {
-  config.debug && console.log(action)
+  config.debug && action.kind !== "tick" && console.log(action)
 
   switch (action.kind) {
     case "key_pressed":
-      const newPlayerPosition = updatePlayerPostion(state, action.key)
-
-      return { ...state, player: {...state.player, position: newPlayerPosition } }
+      return updatePlayerPosition(state, computePlayerPostion(state, action.key))
 
     case "tick":
+
       // TODO
-      return state
+      return updatePlayerPosition(state, {
+        x: state.player.position.x,
+        y: state.player.position.y + (action.ms * config.playerVelocityPxPerMs ),
+      })
+      // return state
   }
 }
 
+function updatePlayerPosition(state: State, position: Point) {
+  return { ...state, player: {...state.player, position } }
+
+}
+
+
 
 type Point = { x: number, y: number }
-function updatePlayerPostion(state: State, key: Key): Point {
+function computePlayerPostion(state: State, key: Key): Point {
   // TODO: collision etc. based on sate
   const position = state.player.position
 
   switch (key) {
     case "w":
-      return { x: position.x + 1, y: position.y }
-    case "a":
       return { x: position.x, y: position.y - 1 }
-    case "s":
+
+    case "a":
       return { x: position.x - 1, y: position.y }
-    case "d":
+
+    case "s":
       return { x: position.x, y: position.y + 1 }
+
+    case "d":
+      return { x: position.x + 1, y: position.y }
   }
 }
 
@@ -92,15 +105,15 @@ function render(state: State) {
   if (ctx) {
     ctx.clearRect(0, 0, config.canvas.widthPx, config.canvas.heightPx)
 
-    ctx.rect(10,10,10,10)
-    ctx.rect(30,10,10,10)
-    ctx.stroke()
-
-    ctx.fillRect(20,20,10,10)
+    renderPlayer(ctx, state.player)
 
   } else {
     console.error("getContext returned null")
   }
+}
+
+function renderPlayer(ctx: CanvasRenderingContext2D ,player: Player) {
+  ctx.fillRect(player.position.x, player.position.y, 50, 50)
 }
 
 // App
