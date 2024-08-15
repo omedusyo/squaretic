@@ -1,4 +1,6 @@
 import { runApp } from "./tea.js"
+import { Vector, Point } from "./geometry.js"
+
 // app config
 const config = {
   canvas: { widthPx: 1000, heightPx: 800 },
@@ -45,8 +47,6 @@ const initState: State = {
 }
 
 type Player = { position: Point }
-
-type Point = { x: number, y: number }
 
 type Obstacle = Rectangle
 
@@ -212,3 +212,4 @@ document.onkeydown = function(e) {
 document.onkeyup = function(e) {
   handleKeyboardReleasedEvent(e.key)
 }
+console.log(Vector.zero);
