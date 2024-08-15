@@ -1,4 +1,6 @@
 import { runApp } from "./tea.js"
+import { Vector, Point } from "./geometry.js"
+
 // app config
 const config = {
   canvas: { widthPx: 1000, heightPx: 800 },
@@ -120,7 +122,6 @@ function setKeyboard(state: State, keyboard: Keyboard): State {
   return { ...state, keyboard }
 }
 
-type Point = { x: number, y: number }
 function computePlayerPostion(state: State, key: Key): Point {
   // TODO: collision etc. based on sate
   const position = state.player.position
@@ -203,3 +204,4 @@ document.onkeydown = function(e) {
 document.onkeyup = function(e) {
   handleKeyboardReleasedEvent(e.key)
 }
+console.log(Vector.zero);
