@@ -28,18 +28,33 @@ function decodeKey(key: string): Key | null {
 // APP
 // State
 type State = {
-  player: Player
+  player: Player,
+  keyboard: Keyboard,
 }
 
 const initState: State = {
-  player: { position: { x: 10, y: 10 } }
+  player: { position: { x: 10, y: 10 } },
+  keyboard: {
+    up_pressed: false,
+    down_pressed: false,
+    left_pressed: false,
+    right_pressed: false,
+  }
 }
 
 type Player = { position: Point }
 
+type Keyboard = {
+  up_pressed: Boolean,
+  down_pressed: Boolean,
+  left_pressed: Boolean,
+  right_pressed: Boolean,
+}
+
 // Actions
 type Action
-  = { kind: "key_pressed", key: Key }
+  = { kind: "key_down", key: Key }
+  | { kind: "key_up", key: Key }
   | { kind: "tick", ms: number }
 
 // Update
@@ -47,12 +62,27 @@ function update(state: State, action:Action): State {
   config.debug && action.kind !== "tick" && console.log(action)
 
   switch (action.kind) {
-    case "key_pressed":
+    case "key_down":
       return updatePlayerPosition(state, computePlayerPostion(state, action.key))
+    case "key_up":
+      switch (action.key) {
+        case "w": return updateKeyboard(state, {...state.keyboard, up_pressed: false})
+        case "a": return updateKeyboard(state, {...state.keyboard, left_pressed: false})
+        case "d": return updateKeyboard(state, {...state.keyboard, right_pressed: false})
+        case "s": return updateKeyboard(state, {...state.keyboard, down_pressed: false})
+      }
+      // return updatePlayerPosition(state, computePlayerPostion(state, action.key))
+      // return updateKeyboard
+    case "key_down":
+      switch (action.key) {
+        case "w": return updateKeyboard(state, {...state.keyboard, up_pressed: true})
+        case "a": return updateKeyboard(state, {...state.keyboard, left_pressed: true})
+        case "d": return updateKeyboard(state, {...state.keyboard, right_pressed: true})
+        case "s": return updateKeyboard(state, {...state.keyboard, down_pressed: true})
+      }
 
     case "tick":
-
-      // TODO
+      // Number(state.keyboard.up_pressed)
       return updatePlayerPosition(state, {
         x: state.player.position.x,
         y: state.player.position.y + (action.ms * config.playerVelocityPxPerMs ),
@@ -61,12 +91,14 @@ function update(state: State, action:Action): State {
   }
 }
 
-function updatePlayerPosition(state: State, position: Point) {
+function updatePlayerPosition(state: State, position: Point): State {
   return { ...state, player: {...state.player, position } }
-
 }
 
 
+function updateKeyboard(state: State, keyboard: Keyboard): State {
+  return { ...state, keyboard }
+}
 
 type Point = { x: number, y: number }
 function computePlayerPostion(state: State, key: Key): Point {
@@ -75,16 +107,16 @@ function computePlayerPostion(state: State, key: Key): Point {
 
   switch (key) {
     case "w":
-      return { x: position.x, y: position.y - 1 }
+      return { x: position.x, y: position.y - 5 }
 
     case "a":
-      return { x: position.x - 1, y: position.y }
+      return { x: position.x - 5, y: position.y }
 
     case "s":
-      return { x: position.x, y: position.y + 1 }
+      return { x: position.x, y: position.y + 5 }
 
     case "d":
-      return { x: position.x + 1, y: position.y }
+      return { x: position.x + 5, y: position.y }
   }
 }
 
@@ -117,13 +149,23 @@ function renderPlayer(ctx: CanvasRenderingContext2D ,player: Player) {
 }
 
 // App
-function handleKeyboardEvent(keyString: string) {
+function handleKeyboardDownEvent(keyString: string) {
   const key = decodeKey(keyString)
 
   if (key !== null) {
-    triggerAction({ kind: "key_pressed", key })
+    triggerAction({ kind: "key_down", key })
   } else {
-    config.debug && console.warn("Unhandled key press", keyString)
+    config.debug && console.warn("Unhandled key-down event", keyString)
+  }
+}
+
+function handleKeyboardUpEvent(keyString: string) {
+  const key = decodeKey(keyString)
+
+  if (key !== null) {
+    triggerAction({ kind: "key_up", key })
+  } else {
+    config.debug && console.warn("Unhandled key-up event", keyString)
   }
 }
 
@@ -135,5 +177,9 @@ const triggerAction = runApp(
 )
 
 document.onkeydown = function(e) {
-  handleKeyboardEvent(e.key)
+  handleKeyboardDownEvent(e.key)
+}
+
+document.onkeyup = function(e) {
+  handleKeyboardUpEvent(e.key)
 }
