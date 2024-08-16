@@ -1,6 +1,7 @@
 export type Point = { x: number, y: number }
 export type Vector = { dx: number, dy: number }
 export type Rectangle = Point & { width: number, height: number }
+export type OrthogonalSplit = { projection: Vector, rejection: Vector }
 
 export namespace Vector {
   export function fromCartesian(dx: number, dy: number): Vector {
@@ -68,6 +69,13 @@ export namespace Vector {
   export function rotBy(v: Vector, angle: number): Vector {
     return { dx: Math.cos(angle)*v.dx - Math.sin(angle)*v.dy, dy: Math.sin(angle)*v.dx + Math.cos(angle)*v.dy }
   }
+
+  // Assumes e is unit vector.
+  export function decompose(v: Vector, e: Vector): OrthogonalSplit {
+    const projection = scale(dot(v, e), e)
+    const rejection  = sub(v, projection)
+    return { projection, rejection }
+  }
 }
 
 export namespace Point {
@@ -100,6 +108,17 @@ export namespace Interval {
 
   export function intersect(i: Interval, j: Interval) {
     return contains(i.start, j) || contains(i.end, j)
+  }
+}
+
+export type LineSegment = { start: Point, end: Point, unit_direction: Vector }
+export namespace LineSegment {
+  export function from(start: Point, end: Point): LineSegment {
+    return { start, end, unit_direction: Point.sub(end, start) }
+  }
+
+  export function decompose(l: LineSegment, v: Vector): OrthogonalSplit {
+    return Vector.decompose(v, l.unit_direction)
   }
 }
 
