@@ -137,7 +137,15 @@ function step(state:State, dt: number): State {
           movePlayer(
             Vector.scale(dt * config.playerVelocity, keyboardToVector(state.keyboard)),
             (point) => state.obstacles.filter(obstacle =>
-              Rectangle.intersect({ ...state.player.body, center: point }, obstacle)
+              Polygon4.intersectsLineSegment(
+                Polygon4.fromRotatedRectangle(
+                  { size: state.player.body.size,
+                    center: point,
+                  },
+                  state.player.face,
+                ),
+                obstacle,
+              )
             ).length >= 1,
             state.player.body.center,
             true,
@@ -220,7 +228,7 @@ function renderPlayer(ctx: CanvasRenderingContext2D, { body, face }: Player) {
   rect.lineTo(playerPolygon.a.x, playerPolygon.a.y);
   rect.lineTo(playerPolygon.b.x, playerPolygon.b.y);
   rect.lineTo(playerPolygon.c.x, playerPolygon.c.y);
-  // rect.lineTo(playerPolygon.d.x, playerPolygon.d.y);
+  rect.lineTo(playerPolygon.d.x, playerPolygon.d.y);
   rect.closePath();
   ctx.fillStyle = "green";
   ctx.fill(rect);
@@ -229,13 +237,14 @@ function renderPlayer(ctx: CanvasRenderingContext2D, { body, face }: Player) {
 }
 
 function renderObstacle(ctx: CanvasRenderingContext2D, obstacle: Obstacle) {
-  ctx.lineWidth = 1
-  const lineSegment = new Path2D();
-  lineSegment.lineTo(obstacle.start.x, obstacle.start.x);
-  lineSegment.lineTo(obstacle.end.x, obstacle.end.x);
-  // lineSegment.closePath();
-  ctx.fillStyle = "red";
-  ctx.fill(lineSegment);
+  // Start a new Path
+  ctx.beginPath()
+  ctx.moveTo(obstacle.start.x, obstacle.start.y)
+  ctx.lineTo(obstacle.end.x, obstacle.end.y)
+
+  // Draw the Path
+  ctx.strokeStyle = "red"
+  ctx.stroke()
 }
 
 // App
