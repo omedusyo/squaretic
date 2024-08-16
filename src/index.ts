@@ -206,8 +206,28 @@ function render(state: State) {
   }
 }
 
-function renderPlayer(ctx: CanvasRenderingContext2D, { body }: Player) {
-  ctx.fillRect(body.position.x, body.position.y, body.width, body.height)
+function renderPlayer(ctx: CanvasRenderingContext2D, { body, face }: Player) {
+  const normalizedFace = Vector.normalize(face)
+  const orthoFace = Vector.rotBy(normalizedFace, Math.PI / 2)
+
+  const forward = Point.add(body.position, Vector.scale(body.height / 2, normalizedFace))
+  const forwardLeft = Point.add(forward, Vector.scale(body.width / 2, orthoFace))
+  const forwardRight = Point.add(forward, Vector.scale(body.width / 2, Vector.neg(orthoFace)))
+
+  const backwards = Point.add(body.position, Vector.scale(body.height / 2, Vector.neg(normalizedFace)))
+  const backwardsLeft = Point.add(backwards, Vector.scale(body.width / 2, orthoFace))
+  const backwardsRight = Point.add(backwards, Vector.scale(body.width / 2, Vector.neg(orthoFace)))
+
+  const rect = new Path2D();
+  rect.lineTo(forwardLeft.x, forwardLeft.y);
+  rect.lineTo(forwardRight.x, forwardRight.y);
+  rect.lineTo(backwardsRight.x, backwardsRight.y);
+  rect.lineTo(backwardsLeft.x, backwardsLeft.y);
+  rect.closePath();
+  ctx.fillStyle = "green";
+  ctx.fill(rect);
+
+  // ctx.fillRect(body.position.x, body.position.y, body.width, body.height)
 }
 
 function renderObstacle(ctx: CanvasRenderingContext2D, obstacle: Obstacle) {

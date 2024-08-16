@@ -1,6 +1,7 @@
 export type Point = { x: number, y: number }
 export type Vector = { dx: number, dy: number }
 export type Rectangle = { position: Point, width: number, height: number }
+export type Polygon4 = { a: Point, b: Point, c: Point, d: Point }
 export type OrthogonalSplit = { projection: Vector, rejection: Vector }
 
 export namespace Vector {
@@ -120,6 +121,11 @@ export namespace LineSegment {
   export function decompose(l: LineSegment, v: Vector): OrthogonalSplit {
     return Vector.decompose(v, l.unit_direction)
   }
+
+  export function intersects(ls1: LineSegment, ls2: LineSegment): boolean {
+    // TODO
+    return true
+  }
 }
 
 export namespace Rectangle {
@@ -137,5 +143,22 @@ export namespace Rectangle {
 
   export function intersect(r1: Rectangle, r2: Rectangle) {
     return Interval.intersect(xProj(r1), xProj(r2)) && Interval.intersect(yProj(r1), yProj(r2))
+  }
+}
+
+export namespace Polygon4 {
+  export function fromPoints(a: Point, b: Point, c: Point, d: Point): Polygon4 {
+    return { a, b, c ,d }
+  }
+
+  export function intersectsLineSegment(p: Polygon4, ls: LineSegment): boolean {
+    const faces: LineSegment[] = [
+      LineSegment.from(p.a, p.b),
+      LineSegment.from(p.b, p.c),
+      LineSegment.from(p.c, p.d),
+      LineSegment.from(p.d, p.a),
+    ]
+
+    return faces.some(face => LineSegment.intersects(face, ls))
   }
 }
