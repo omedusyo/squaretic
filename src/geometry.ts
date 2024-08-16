@@ -4,6 +4,8 @@ export type Rectangle = { center: Point, size: { width: number, height: number }
 export type Polygon4 = { a: Point, b: Point, c: Point, d: Point }
 export type OrthogonalSplit = { projection: Vector, rejection: Vector }
 
+const epsilon = 0.00001
+
 export namespace Vector {
   export function fromCartesian(dx: number, dy: number): Vector {
     return { dx, dy }
@@ -83,13 +85,11 @@ export namespace Vector {
   }
 
   export function isParallel(v: Vector, w: Vector): boolean {
-    // TODO: Comparing two floats for equality. Suspect.
-    return determinant(v, w) == 0
+    return Math.abs(determinant(v, w)) < epsilon
   }
 
   export function isOrthogonal(v: Vector, w: Vector): boolean {
-    // TODO: Comparing two floats for equality. Suspect.
-    return dot(v, w) == 0
+    return Math.abs(dot(v, w)) < epsilon
   }
 }
 
@@ -129,7 +129,7 @@ export namespace Interval {
 export type LineSegment = { start: Point, end: Point, unit_direction: Vector }
 export namespace LineSegment {
   export function from(start: Point, end: Point): LineSegment {
-    return { start, end, unit_direction: Point.sub(end, start) }
+    return { start, end, unit_direction: Vector.normalize(Point.sub(end, start)) }
   }
 
   export function normal(ls: LineSegment): Vector {
@@ -158,13 +158,13 @@ export namespace LineSegment {
     const normal0 = LineSegment.normal(ls0)
     const direction1 = ls1.unit_direction
     const dot = Vector.dot(normal0, direction1)
-    if (dot == 0) {
+    if (Math.abs(dot) < epsilon) {
       // The lines determined by the line-segments are parallel
       // If they intersect, then one of the endpoint of ls1 lies in ls0
       return contains(ls0, ls1.start) || contains(ls0, ls1.end)
     } else {
       // The lines determined by the line-segment do intersect.
-      const k = -Vector.dot(normal0, Point.sub(ls1.start, ls0.start))
+      const k = -Vector.dot(normal0, Point.sub(ls1.start, ls0.start)) / dot
       const intersection = Point.add(ls1.start, Vector.scale(k, ls1.unit_direction))
       return contains(ls0, intersection)
     }

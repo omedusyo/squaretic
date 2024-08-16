@@ -129,10 +129,7 @@ function step(state:State, dt: number): State {
     player: {
       face: state.player.face,
       body: {
-        size: {
-          width: state.player.body.size.width,
-          height: state.player.body.size.height,
-        },
+        size: state.player.body.size,
         center: 
           movePlayer(
             Vector.scale(dt * config.playerVelocity, keyboardToVector(state.keyboard)),
