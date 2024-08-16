@@ -1,6 +1,6 @@
 export type Point = { x: number, y: number }
 export type Vector = { dx: number, dy: number }
-export type Rectangle = Point & { width: number, height: number }
+export type Rectangle = { position: Point, width: number, height: number }
 export type OrthogonalSplit = { projection: Vector, rejection: Vector }
 
 export namespace Vector {
@@ -123,28 +123,19 @@ export namespace LineSegment {
 }
 
 export namespace Rectangle {
-  export function createSquare(params: Point & { width: number }) {
-    return { x: params.x, y: params.y, width: params.width, height: params.width }
+  export function createSquare(params: Point & { width: number }): Rectangle {
+    return { position: { x: params.x, y: params.y }, width: params.width, height: params.width }
   }
 
-  export function xProj(r: Rectangle): Interval {
-    return Interval.create( r.x, r.x + r.width ) 
+  export function xProj({position, width}: Rectangle): Interval {
+    return Interval.create( position.x, position.x + width ) 
   }
 
-  export function yProj(r: Rectangle): Interval {
-    return Interval.create( r.y, r.y + r.height ) 
+  export function yProj({position, height}: Rectangle): Interval {
+    return Interval.create( position.y, position.y + height ) 
   }
 
   export function intersect(r1: Rectangle, r2: Rectangle) {
     return Interval.intersect(xProj(r1), xProj(r2)) && Interval.intersect(yProj(r1), yProj(r2))
-  }
-
-  export function position(r: Rectangle) {
-    return { x: r.x, y: r.y }
-
-  }
-
-  export function updatePosition(r: Rectangle, f: (p: Point) => Point): Rectangle {
-    return { ...r, ...f(Rectangle.position(r)) }
   }
 }

@@ -4,7 +4,7 @@ import { Vector, Point, Rectangle } from "./geometry.js"
 // app config
 const config = {
   canvas: { widthPx: 1000, heightPx: 800 },
-  playerVelocity: 1/1000 * 1500,
+  playerVelocity: 1/1000 * 400,
   debug: true,
   planckTime: 4, // ms
 }
@@ -45,8 +45,11 @@ type State = {
 }
 
 const initState: State = {
-  player: Rectangle.createSquare({x:500, y:700, width:50}),
-  obstacles: [ { x: 0, y: config.canvas.heightPx - 10, width: config.canvas.widthPx, height: 10 }],
+  player: {
+    body: Rectangle.createSquare({x:500, y:700, width:50}),
+    face: Vector.fromCartesian(0,-1),
+  }, 
+  obstacles: [ { position: { x: 0, y: config.canvas.heightPx - 10 }, width: config.canvas.widthPx, height: 10 }],
   keyboard: {
     up_pressed: false,
     down_pressed: false,
@@ -55,7 +58,10 @@ const initState: State = {
   }
 }
 
-type Player = Rectangle
+type Player =  {
+  body: Rectangle,
+  face: Vector,
+}
 
 type Obstacle = Rectangle
 
@@ -70,6 +76,7 @@ type Keyboard = {
 type Action
   = { kind: "key_pressed", key: Key }
   | { kind: "key_released", key: Key }
+  | { kind: "mouse_moved", point: Point }
   | { kind: "tick", dt: number }
 
 // Update
@@ -93,6 +100,12 @@ function update(state: State, action:Action): State {
         case "down": return setKeyboard(state, {...state.keyboard, down_pressed: true})
       }
 
+    case "mouse_moved":
+      return {...state,
+        player: {...state.player,
+          face: Point.sub(action.point, state.player.body.position)
+        }
+      }
     case "tick":
       const planckTimesPassed =  Math.floor(action.dt / config.planckTime)
 
@@ -109,14 +122,18 @@ function step(state:State, dt: number): State {
   return {
     ...state,
     player: {
-      width: state.player.width,
-      height: state.player.height,
-      ...movePlayer(
-        Vector.scale(dt * config.playerVelocity, keyboardToVector(state.keyboard)),
-        (point) => state.obstacles.filter(obstacle => Rectangle.intersect({ ...state.player, ...point}, obstacle)).length >= 1,
-        state.player,
-        true,
-      ),
+      ...state.player,
+      body: {
+        width: state.player.body.width,
+        height: state.player.body.height,
+        position: 
+          movePlayer(
+            Vector.scale(dt * config.playerVelocity, keyboardToVector(state.keyboard)),
+            (point) => state.obstacles.filter(obstacle => Rectangle.intersect({ ...state.player.body, ...point }, obstacle)).length >= 1,
+            state.player.body.position,
+            true,
+          )
+      }
     }
   }
 }
@@ -187,12 +204,12 @@ function render(state: State) {
   }
 }
 
-function renderPlayer(ctx: CanvasRenderingContext2D ,player: Player) {
-  ctx.fillRect(player.x, player.y, player.width, player.height)
+function renderPlayer(ctx: CanvasRenderingContext2D, { body }: Player) {
+  ctx.fillRect(body.position.x, body.position.y, body.width, body.height)
 }
 
 function renderObstacle(ctx: CanvasRenderingContext2D, obstacle: Obstacle) {
-  ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height)
+  ctx.fillRect(obstacle.position.x, obstacle.position.y, obstacle.width, obstacle.height)
 }
 
 // App
@@ -216,6 +233,10 @@ function handleKeyboardReleasedEvent(keyString: string) {
   }
 }
 
+function handleMouseMove(point: Point) {
+  triggerAction({ kind: "mouse_moved", point })
+}
+
 const triggerAction = runApp(
   initState,
   dt => ({ kind: "tick", dt } as Action),
@@ -230,4 +251,12 @@ document.onkeydown = function(e) {
 document.onkeyup = function(e) {
   handleKeyboardReleasedEvent(e.key)
 }
-console.log(Vector.zero);
+
+canvas.onmousemove =  function (e: MouseEvent) {
+  let rect = canvas.getBoundingClientRect();
+  
+  handleMouseMove({
+    x: e.clientX - rect.left,
+    y: e.clientY - rect.top,
+  })
+}
