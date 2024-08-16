@@ -10,18 +10,26 @@ const config = {
 }
 
 // keyboard events
-type Key = "w" | "a" | "s" | "d"
+type Key = "up" | "left" | "down" | "right"
  
 function decodeKey(key: string): Key | null {
   switch (key) {
     case "w":
-      return "w"
+      return "up"
     case "a":
-      return "a"
+      return "left"
     case "s":
-      return "s"
+      return "down"
     case "d":
-      return "d"
+      return "right"
+    case "W":
+      return "up"
+    case "A":
+      return "left"
+    case "S":
+      return "down"
+    case "D":
+      return "right"
       
     default:
       return null
@@ -71,18 +79,18 @@ function update(state: State, action:Action): State {
   switch (action.kind) {
     case "key_released":
       switch (action.key) {
-        case "w": return setKeyboard(state, {...state.keyboard, up_pressed: false})
-        case "a": return setKeyboard(state, {...state.keyboard, left_pressed: false})
-        case "d": return setKeyboard(state, {...state.keyboard, right_pressed: false})
-        case "s": return setKeyboard(state, {...state.keyboard, down_pressed: false})
+        case "up": return setKeyboard(state, {...state.keyboard, up_pressed: false})
+        case "left": return setKeyboard(state, {...state.keyboard, left_pressed: false})
+        case "right": return setKeyboard(state, {...state.keyboard, right_pressed: false})
+        case "down": return setKeyboard(state, {...state.keyboard, down_pressed: false})
       }
 
     case "key_pressed":
       switch (action.key) {
-        case "w": return setKeyboard(state, {...state.keyboard, up_pressed: true})
-        case "a": return setKeyboard(state, {...state.keyboard, left_pressed: true})
-        case "d": return setKeyboard(state, {...state.keyboard, right_pressed: true})
-        case "s": return setKeyboard(state, {...state.keyboard, down_pressed: true})
+        case "up": return setKeyboard(state, {...state.keyboard, up_pressed: true})
+        case "left": return setKeyboard(state, {...state.keyboard, left_pressed: true})
+        case "right": return setKeyboard(state, {...state.keyboard, right_pressed: true})
+        case "down": return setKeyboard(state, {...state.keyboard, down_pressed: true})
       }
 
     case "tick":
