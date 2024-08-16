@@ -1,10 +1,10 @@
 import { runApp } from "./tea.js"
-import { Vector, Point } from "./geometry.js"
+import { Vector, Point, Rectangle } from "./geometry.js"
 
 // app config
 const config = {
   canvas: { widthPx: 1000, heightPx: 800 },
-  playerVelocityPxPerMs: 1/1000 * 200,
+  playerVelocity: 1/1000 * 200,
   debug: true,
 }
 
@@ -36,7 +36,7 @@ type State = {
 }
 
 const initState: State = {
-  player: { position: { x: 500, y: 700 } },
+  player: Rectangle.createSquare({x:500, y:700, width:50}),
   obstacles: [ { x: 0, y: config.canvas.heightPx - 10, width: config.canvas.widthPx, height: 10 }],
   keyboard: {
     up_pressed: false,
@@ -46,31 +46,9 @@ const initState: State = {
   }
 }
 
-type Player = { position: Point }
+type Player = Rectangle
 
 type Obstacle = Rectangle
-
-type Rectangle = Point & { width: number, height: number }
-
-// detectCollision(r1,r2)
-//   0:
-//             r1      r2
-//       ----[----]--[----]---- (+)
-//   1:
-//             r1      r2
-//       ----[----|----]----    (+)
-//
-//            r1    r2
-//       ----[--[-]--]----      (+)
-//
-//  -1:
-//            r2    r1
-//       ----[--[-]--]----      (+)
-type RectangleCollision = { x }
-
-function detectCollision(r1: Rectangle, r2: Rectangle) {
-
-}
 
 type Keyboard = {
   up_pressed: boolean,
@@ -107,38 +85,65 @@ function update(state: State, action:Action): State {
       }
 
     case "tick":
-      state.keyboard.left_pressed
-      // Number(state.keyboard.up_pressed)
-      return setPlayerPosition(state, {
-        x: state.player.position.x +
-          action.ms *
-          config.playerVelocityPxPerMs *
-          pressesToDirection(state.keyboard.right_pressed, state.keyboard.left_pressed)
-        ,
-        y: state.player.position.y +
-          action.ms *
-          config.playerVelocityPxPerMs *
-          pressesToDirection(state.keyboard.down_pressed, state.keyboard.up_pressed)
-        ,
-      })
-      // return state
+      return { ...state,
+        player: updatePlayer(state, action.ms)
+      }
   }
 }
 
-function pressesToDirection(plus: boolean, minus: boolean): number {
-  if (plus === minus) {
-    return 0
-  } else if (plus) {
-    return + 1
+function updatePlayer(state: State, dt: number): Player  {
+  return {
+    width: state.player.width,
+    height: state.player.height,
+    ...helpGetCloser(
+      Vector.scale(dt * config.playerVelocity, keyboardToVector(state.keyboard)),
+      (point) => state.obstacles.filter(obstacle => Rectangle.intersect({ ...state.player, ...point}, obstacle)).length >= 1,
+      state.player,
+    ),
+  }
+
+}
+
+const planckSpace = 0.1
+function helpGetCloser(direction: Vector, doesCollide: (point: Point) => boolean, point: Point): Point {
+  if (Vector.magnitude(direction) < planckSpace) { return point }
+
+  const newPoint = Point.add(point, direction)
+
+  if (doesCollide(newPoint)) {
+    return moveInHalfSteps(direction, doesCollide, point)
   } else {
-    return -1
-  } 
+    return newPoint
+  }
 }
 
-function setPlayerPosition(state: State, position: Point): State {
-  return { ...state, player: {...state.player, position } }
+function moveInHalfSteps(direction: Vector, doesCollide: (point: Point) => boolean, point: Point): Point {
+  direction = Vector.scale(0.5, direction)
+  if (Vector.magnitude(direction) < planckSpace) { return point }
+
+  const newPoint = Point.add(point, direction)
+
+  if (doesCollide(newPoint)) {
+    return moveInHalfSteps(direction, doesCollide, point)
+  } else {
+    return moveInHalfSteps(direction, doesCollide, newPoint)
+  }
 }
 
+function keyboardToVector(keyboard: Keyboard): Vector {
+  return Vector.normalize(
+    Vector.sum([
+      Vector.scale(booleanToNum(keyboard.up_pressed), Vector.fromCartesian(0,-1)),
+      Vector.scale(booleanToNum(keyboard.down_pressed), Vector.fromCartesian(0,1)),
+      Vector.scale(booleanToNum(keyboard.left_pressed), Vector.fromCartesian(-1,0)),
+      Vector.scale(booleanToNum(keyboard.right_pressed), Vector.fromCartesian(1,0)),
+    ])
+  )
+}
+
+function booleanToNum(b:boolean): number {
+  return b ? 1 : 0
+}
 
 function setKeyboard(state: State, keyboard: Keyboard): State {
   return { ...state, keyboard }
@@ -170,7 +175,7 @@ function render(state: State) {
 }
 
 function renderPlayer(ctx: CanvasRenderingContext2D ,player: Player) {
-  ctx.fillRect(player.position.x, player.position.y, 50, 50)
+  ctx.fillRect(player.x, player.y, player.width, player.height)
 }
 
 function renderObstacle(ctx: CanvasRenderingContext2D, obstacle: Obstacle) {
