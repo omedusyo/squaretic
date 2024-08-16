@@ -4,8 +4,9 @@ import { Vector, Point, Rectangle } from "./geometry.js"
 // app config
 const config = {
   canvas: { widthPx: 1000, heightPx: 800 },
-  playerVelocity: 1/1000 * 400,
+  playerVelocity: 1/1000 * 1500,
   debug: true,
+  planckTime: 4, // ms
 }
 
 // keyboard events
@@ -61,7 +62,7 @@ type Keyboard = {
 type Action
   = { kind: "key_pressed", key: Key }
   | { kind: "key_released", key: Key }
-  | { kind: "tick", ms: number }
+  | { kind: "tick", dt: number }
 
 // Update
 function update(state: State, action:Action): State {
@@ -85,41 +86,46 @@ function update(state: State, action:Action): State {
       }
 
     case "tick":
-      return { ...state,
-        player: updatePlayer(state, action.ms)
+      const planckTimesPassed =  Math.floor(action.dt / config.planckTime)
+
+      let newState = state
+      for (let i = 0; i < planckTimesPassed; i++) {
+        newState = step(newState, config.planckTime)
       }
+
+      return newState
   }
 }
 
-function updatePlayer(state: State, dt: number): Player  {
-  console.log(keyboardToVector(state.keyboard))
+function step(state:State, dt: number): State {
   return {
-    width: state.player.width,
-    height: state.player.height,
-    ...helpGetCloser(
-      Vector.scale(dt * config.playerVelocity, keyboardToVector(state.keyboard)),
-      (point) => state.obstacles.filter(obstacle => Rectangle.intersect({ ...state.player, ...point}, obstacle)).length >= 1,
-      state.player,
-      true,
-    ),
+    ...state,
+    player: {
+      width: state.player.width,
+      height: state.player.height,
+      ...movePlayer(
+        Vector.scale(dt * config.playerVelocity, keyboardToVector(state.keyboard)),
+        (point) => state.obstacles.filter(obstacle => Rectangle.intersect({ ...state.player, ...point}, obstacle)).length >= 1,
+        state.player,
+        true,
+      ),
+    }
   }
-
 }
 
-const planckSpace = 0.1
-function helpGetCloser(direction: Vector, doesCollide: (point: Point) => boolean, point: Point, isFirstCall?: boolean): Point {
-
+const planckSpace = 0.1 // px
+function movePlayer(direction: Vector, doesCollide: (point: Point) => boolean, point: Point, isFirstCall?: boolean): Point {
   if (Vector.magnitude(direction) < planckSpace) { return point }
 
   const newPoint = Point.add(point, direction)
 
   if (doesCollide(newPoint)) {
-    return helpGetCloser(Vector.scale(0.5, direction), doesCollide, point, false)
+    return movePlayer(Vector.scale(0.5, direction), doesCollide, point, false)
   } else {
     if (isFirstCall) {
       return newPoint
     } else {
-      return helpGetCloser(Vector.scale(0.5, direction), doesCollide, newPoint, false)
+      return movePlayer(Vector.scale(0.5, direction), doesCollide, newPoint, false)
     }
   }
 }
@@ -204,7 +210,7 @@ function handleKeyboardReleasedEvent(keyString: string) {
 
 const triggerAction = runApp(
   initState,
-  ms => ({ kind: "tick", ms } as Action),
+  dt => ({ kind: "tick", dt } as Action),
   update,
   render
 )
