@@ -1,5 +1,5 @@
 import { runApp } from "./tea.js"
-import { Vector, Point, Rectangle } from "./geometry.js"
+import { Vector, Point, Rectangle, Polygon4 } from "./geometry.js"
 
 // app config
 const config = {
@@ -207,22 +207,13 @@ function render(state: State) {
 }
 
 function renderPlayer(ctx: CanvasRenderingContext2D, { body, face }: Player) {
-  const normalizedFace = Vector.normalize(face)
-  const orthoFace = Vector.rotBy(normalizedFace, Math.PI / 2)
-
-  const forward = Point.add(body.position, Vector.scale(body.height / 2, normalizedFace))
-  const forwardLeft = Point.add(forward, Vector.scale(body.width / 2, orthoFace))
-  const forwardRight = Point.add(forward, Vector.scale(body.width / 2, Vector.neg(orthoFace)))
-
-  const backwards = Point.add(body.position, Vector.scale(body.height / 2, Vector.neg(normalizedFace)))
-  const backwardsLeft = Point.add(backwards, Vector.scale(body.width / 2, orthoFace))
-  const backwardsRight = Point.add(backwards, Vector.scale(body.width / 2, Vector.neg(orthoFace)))
+  const playerPolygon = Polygon4.fromRotatedRectangle(body, face) 
 
   const rect = new Path2D();
-  rect.lineTo(forwardLeft.x, forwardLeft.y);
-  rect.lineTo(forwardRight.x, forwardRight.y);
-  rect.lineTo(backwardsRight.x, backwardsRight.y);
-  rect.lineTo(backwardsLeft.x, backwardsLeft.y);
+  rect.lineTo(playerPolygon.a.x, playerPolygon.a.y);
+  rect.lineTo(playerPolygon.b.x, playerPolygon.b.y);
+  rect.lineTo(playerPolygon.c.x, playerPolygon.c.y);
+  rect.lineTo(playerPolygon.d.x, playerPolygon.d.y);
   rect.closePath();
   ctx.fillStyle = "green";
   ctx.fill(rect);
