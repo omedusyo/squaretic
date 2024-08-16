@@ -129,7 +129,9 @@ function step(state:State, dt: number): State {
         position: 
           movePlayer(
             Vector.scale(dt * config.playerVelocity, keyboardToVector(state.keyboard)),
-            (point) => state.obstacles.filter(obstacle => Rectangle.intersect({ ...state.player.body, ...point }, obstacle)).length >= 1,
+            (point) => state.obstacles.filter(obstacle =>
+              Rectangle.intersect({ ...state.player.body, position: point }, obstacle)
+            ).length >= 1,
             state.player.body.position,
             true,
           )
