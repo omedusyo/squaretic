@@ -1,5 +1,5 @@
 import { runApp } from "./tea.js"
-import { Vector, Point, Rectangle, Polygon4 } from "./geometry.js"
+import { Vector, Point, Rectangle, Polygon4, LineSegment } from "./geometry.js"
 
 // app config
 const config = {
@@ -49,7 +49,12 @@ const initState: State = {
     body: Rectangle.createSquare({x:500, y:700, width:50}),
     face: Vector.fromCartesian(0,-1),
   }, 
-  obstacles: [ { position: { x: 0, y: config.canvas.heightPx - 10 }, width: config.canvas.widthPx, height: 10 }],
+  obstacles: [ 
+    LineSegment.from(
+      { x: 0, y: config.canvas.heightPx },
+      { x: config.canvas.widthPx, y: config.canvas.heightPx }
+    )
+  ],
   keyboard: {
     up_pressed: false,
     down_pressed: false,
@@ -63,7 +68,7 @@ type Player =  {
   face: Vector,
 }
 
-type Obstacle = Rectangle
+type Obstacle = LineSegment
 
 type Keyboard = {
   up_pressed: boolean,
@@ -103,7 +108,7 @@ function update(state: State, action:Action): State {
     case "mouse_moved":
       return {...state,
         player: {...state.player,
-          face: Point.sub(action.point, state.player.body.position)
+          face: Point.sub(action.point, state.player.body.center)
         }
       }
     case "tick":
@@ -122,17 +127,19 @@ function step(state:State, dt: number): State {
   return {
     ...state,
     player: {
-      ...state.player,
+      face: state.player.face,
       body: {
-        width: state.player.body.width,
-        height: state.player.body.height,
-        position: 
+        size: {
+          width: state.player.body.size.width,
+          height: state.player.body.size.height,
+        },
+        center: 
           movePlayer(
             Vector.scale(dt * config.playerVelocity, keyboardToVector(state.keyboard)),
             (point) => state.obstacles.filter(obstacle =>
-              Rectangle.intersect({ ...state.player.body, position: point }, obstacle)
+              Rectangle.intersect({ ...state.player.body, center: point }, obstacle)
             ).length >= 1,
-            state.player.body.position,
+            state.player.body.center,
             true,
           )
       }
@@ -213,7 +220,7 @@ function renderPlayer(ctx: CanvasRenderingContext2D, { body, face }: Player) {
   rect.lineTo(playerPolygon.a.x, playerPolygon.a.y);
   rect.lineTo(playerPolygon.b.x, playerPolygon.b.y);
   rect.lineTo(playerPolygon.c.x, playerPolygon.c.y);
-  rect.lineTo(playerPolygon.d.x, playerPolygon.d.y);
+  // rect.lineTo(playerPolygon.d.x, playerPolygon.d.y);
   rect.closePath();
   ctx.fillStyle = "green";
   ctx.fill(rect);
@@ -222,7 +229,13 @@ function renderPlayer(ctx: CanvasRenderingContext2D, { body, face }: Player) {
 }
 
 function renderObstacle(ctx: CanvasRenderingContext2D, obstacle: Obstacle) {
-  ctx.fillRect(obstacle.position.x, obstacle.position.y, obstacle.width, obstacle.height)
+  ctx.lineWidth = 1
+  const lineSegment = new Path2D();
+  lineSegment.lineTo(obstacle.start.x, obstacle.start.x);
+  lineSegment.lineTo(obstacle.end.x, obstacle.end.x);
+  // lineSegment.closePath();
+  ctx.fillStyle = "red";
+  ctx.fill(lineSegment);
 }
 
 // App

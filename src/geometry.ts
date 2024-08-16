@@ -1,6 +1,6 @@
 export type Point = { x: number, y: number }
 export type Vector = { dx: number, dy: number }
-export type Rectangle = { center: Point, width: number, height: number }
+export type Rectangle = { center: Point, size: { width: number, height: number } }
 export type Polygon4 = { a: Point, b: Point, c: Point, d: Point }
 export type OrthogonalSplit = { projection: Vector, rejection: Vector }
 
@@ -130,19 +130,7 @@ export namespace LineSegment {
 
 export namespace Rectangle {
   export function createSquare(params: Point & { width: number }): Rectangle {
-    return { center: { x: params.x, y: params.y }, width: params.width, height: params.width }
-  }
-
-  export function xProj({center: position, width}: Rectangle): Interval {
-    return Interval.create( position.x, position.x + width ) 
-  }
-
-  export function yProj({center: position, height}: Rectangle): Interval {
-    return Interval.create( position.y, position.y + height ) 
-  }
-
-  export function intersect(r1: Rectangle, r2: Rectangle) {
-    return Interval.intersect(xProj(r1), xProj(r2)) && Interval.intersect(yProj(r1), yProj(r2))
+    return { center: { x: params.x, y: params.y }, size: { width: params.width, height: params.width } }
   }
 }
 
@@ -155,13 +143,13 @@ export namespace Polygon4 {
     const normalizedFace = Vector.normalize(face)
     const orthoFace = Vector.rotBy(normalizedFace, Math.PI / 2)
 
-    const forward = Point.add(r.center, Vector.scale(r.height / 2, normalizedFace))
-    const forwardLeft = Point.add(forward, Vector.scale(r.width / 2, orthoFace))
-    const forwardRight = Point.add(forward, Vector.scale(r.width / 2, Vector.neg(orthoFace)))
+    const forward = Point.add(r.center, Vector.scale(r.size.height / 2, normalizedFace))
+    const forwardLeft = Point.add(forward, Vector.scale(r.size.width / 2, orthoFace))
+    const forwardRight = Point.add(forward, Vector.scale(r.size.width / 2, Vector.neg(orthoFace)))
 
-    const backwards = Point.add(r.center, Vector.scale(r.height / 2, Vector.neg(normalizedFace)))
-    const backwardsLeft = Point.add(backwards, Vector.scale(r.width / 2, orthoFace))
-    const backwardsRight = Point.add(backwards, Vector.scale(r.width / 2, Vector.neg(orthoFace)))
+    const backwards = Point.add(r.center, Vector.scale(r.size.height / 2, Vector.neg(normalizedFace)))
+    const backwardsLeft = Point.add(backwards, Vector.scale(r.size.width / 2, orthoFace))
+    const backwardsRight = Point.add(backwards, Vector.scale(r.size.width / 2, Vector.neg(orthoFace)))
 
     return { a: forwardLeft, b: forwardRight, c: backwardsRight, d: backwardsLeft }
   }
