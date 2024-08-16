@@ -55,7 +55,7 @@ export namespace Vector {
   }
 
   export function normalize(v: Vector): Vector {
-    return scale(magnitude(v), v)
+    return scale(1/magnitude(v), v)
   }
 
   export function rot90(v: Vector): Vector {

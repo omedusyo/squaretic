@@ -4,7 +4,7 @@ import { Vector, Point, Rectangle } from "./geometry.js"
 // app config
 const config = {
   canvas: { widthPx: 1000, heightPx: 800 },
-  playerVelocity: 1/1000 * 200,
+  playerVelocity: 1/1000 * 400,
   debug: true,
 }
 
@@ -92,6 +92,7 @@ function update(state: State, action:Action): State {
 }
 
 function updatePlayer(state: State, dt: number): Player  {
+  console.log(keyboardToVector(state.keyboard))
   return {
     width: state.player.width,
     height: state.player.height,
@@ -99,46 +100,44 @@ function updatePlayer(state: State, dt: number): Player  {
       Vector.scale(dt * config.playerVelocity, keyboardToVector(state.keyboard)),
       (point) => state.obstacles.filter(obstacle => Rectangle.intersect({ ...state.player, ...point}, obstacle)).length >= 1,
       state.player,
+      true,
     ),
   }
 
 }
 
 const planckSpace = 0.1
-function helpGetCloser(direction: Vector, doesCollide: (point: Point) => boolean, point: Point): Point {
+function helpGetCloser(direction: Vector, doesCollide: (point: Point) => boolean, point: Point, isFirstCall?: boolean): Point {
+
   if (Vector.magnitude(direction) < planckSpace) { return point }
 
   const newPoint = Point.add(point, direction)
 
   if (doesCollide(newPoint)) {
-    return moveInHalfSteps(direction, doesCollide, point)
+    return helpGetCloser(Vector.scale(0.5, direction), doesCollide, point, false)
   } else {
-    return newPoint
-  }
-}
-
-function moveInHalfSteps(direction: Vector, doesCollide: (point: Point) => boolean, point: Point): Point {
-  direction = Vector.scale(0.5, direction)
-  if (Vector.magnitude(direction) < planckSpace) { return point }
-
-  const newPoint = Point.add(point, direction)
-
-  if (doesCollide(newPoint)) {
-    return moveInHalfSteps(direction, doesCollide, point)
-  } else {
-    return moveInHalfSteps(direction, doesCollide, newPoint)
+    if (isFirstCall) {
+      return newPoint
+    } else {
+      return helpGetCloser(Vector.scale(0.5, direction), doesCollide, newPoint, false)
+    }
   }
 }
 
 function keyboardToVector(keyboard: Keyboard): Vector {
-  return Vector.normalize(
+  const sum = 
     Vector.sum([
       Vector.scale(booleanToNum(keyboard.up_pressed), Vector.fromCartesian(0,-1)),
       Vector.scale(booleanToNum(keyboard.down_pressed), Vector.fromCartesian(0,1)),
       Vector.scale(booleanToNum(keyboard.left_pressed), Vector.fromCartesian(-1,0)),
       Vector.scale(booleanToNum(keyboard.right_pressed), Vector.fromCartesian(1,0)),
     ])
-  )
+
+  if (Vector.magnitude(sum) === 0) {
+    return sum
+  } else {
+    return Vector.normalize(sum)
+  }
 }
 
 function booleanToNum(b:boolean): number {
