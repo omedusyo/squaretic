@@ -37,12 +37,12 @@ export namespace Vector {
     return v.dx*w.dx + v.dy*w.dy
   }
 
-  export function magnitudeSquared(v: Vector): number {
-    return dot(v, v)
+  export function magnitude(v: Vector): number {
+    return (v.dx**2 + v.dy**2)**0.5
   }
 
-  export function magnitude(v: Vector): number {
-    return magnitudeSquared(v)**0.5
+  export function isStrictlyBounded(v: Vector, b: number): boolean {
+    return (v.dx**2 + v.dy**2) < b**2
   }
 
   export function similarity(v: Vector, w: Vector): number {
