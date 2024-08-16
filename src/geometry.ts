@@ -77,6 +77,20 @@ export namespace Vector {
     const rejection  = sub(v, projection)
     return { projection, rejection }
   }
+
+  export function determinant(v: Vector, w: Vector): number {
+    return v.dx * w.dy - v.dy * w.dx
+  }
+
+  export function isParallel(v: Vector, w: Vector): boolean {
+    // TODO: Comparing two floats for equality. Suspect.
+    return determinant(v, w) == 0
+  }
+
+  export function isOrthogonal(v: Vector, w: Vector): boolean {
+    // TODO: Comparing two floats for equality. Suspect.
+    return dot(v, w) == 0
+  }
 }
 
 export namespace Point {
@@ -118,13 +132,42 @@ export namespace LineSegment {
     return { start, end, unit_direction: Point.sub(end, start) }
   }
 
-  export function decompose(l: LineSegment, v: Vector): OrthogonalSplit {
-    return Vector.decompose(v, l.unit_direction)
+  export function normal(ls: LineSegment): Vector {
+    return Vector.rot90(ls.unit_direction)
   }
 
-  export function intersects(ls1: LineSegment, ls2: LineSegment): boolean {
-    // TODO
-    return true
+  export function decompose(ls: LineSegment, v: Vector): OrthogonalSplit {
+    return Vector.decompose(v, ls.unit_direction)
+  }
+
+  export function length(ls: LineSegment): number {
+    return Vector.magnitude(Point.sub(ls.end, ls.start))
+  }
+
+  export function contains(ls: LineSegment, p: Point): boolean {
+    const v = Point.sub(p, ls.start)
+    if (Vector.isParallel(v, ls.unit_direction)) {
+      const k = Vector.dot(v, ls.unit_direction)
+      return 0 <= k && k <= length(ls)
+    } else {
+      return false
+    }
+  }
+
+  export function intersects(ls0: LineSegment, ls1: LineSegment): boolean {
+    const normal0 = LineSegment.normal(ls0)
+    const direction1 = ls1.unit_direction
+    const dot = Vector.dot(normal0, direction1)
+    if (dot == 0) {
+      // The lines determined by the line-segments are parallel
+      // If they intersect, then one of the endpoint of ls1 lies in ls0
+      return contains(ls0, ls1.start) || contains(ls0, ls1.end)
+    } else {
+      // The lines determined by the line-segment do intersect.
+      const k = -Vector.dot(normal0, Point.sub(ls1.start, ls0.start))
+      const intersection = Point.add(ls1.start, Vector.scale(k, ls1.unit_direction))
+      return contains(ls0, intersection)
+    }
   }
 }
 
