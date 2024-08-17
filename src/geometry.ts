@@ -93,6 +93,10 @@ export namespace Vector {
   }
 }
 
+export function radiansToDegrees(angleRad: number): number {
+  return angleRad / (2*Math.PI) * 360
+}
+
 export namespace Point {
   export function fromCartesian(x: number, y: number): Point {
     return { x, y }
