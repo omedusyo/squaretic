@@ -275,27 +275,7 @@ function renderPlayer(ctx: CanvasRenderingContext2D, { body, face }: Player) {
   renderPath(ctx, [swordHandle, swordDirection], 2, "gray")
 
   // sword hit box
-
-  const faceAngle: number = Vector.toAngle(Point.sub(playerPolygon.b, playerPolygon.a))
-  ctx.strokeStyle="yellow"
-  ctx.beginPath()
-  ctx.arc(
-    swordHandle.x,
-    swordHandle.y,
-    swordLength,
-    faceAngle,
-    faceAngle + Math.PI,
-  )
-  ctx.stroke()
-  // ctx.beginPath();
-  // ctx.arc(
-  //   swordHandle.x,
-  //   swordHandle.y,
-  //   swordLength,
-  //   faceAngle,
-  //   2 * Math.PI
-  // );
-  // ctx.stroke();
+  renderArc(ctx, swordHandle, Point.sub(playerPolygon.b, playerPolygon.a), Math.PI, { fill: "yellow", strokeColor: "orange" })
 }
 
 function renderObstacle(ctx: CanvasRenderingContext2D, obstacle: Obstacle) {
@@ -314,6 +294,35 @@ function renderPath(ctx: CanvasRenderingContext2D, points: Point[], lineWidth?: 
     } else {
       ctx.lineTo(point.x, point.y)
     }
+  }
+
+  ctx.stroke()
+}
+
+interface ArcOptions {
+  fill?: String,
+  strokeWidth?: number,
+  strokeColor?: string,
+  counterclockwise?: boolean,
+}
+
+function renderArc(ctx: CanvasRenderingContext2D, center: Point, startVector: Vector, length: number, options: ArcOptions) {
+  ctx.beginPath()
+  const startAngle = Vector.toAngle(startVector)
+  ctx.arc(
+    center.x,
+    center.y,
+    Vector.magnitude(startVector),
+    startAngle,
+    startAngle + length,
+    options.counterclockwise,
+  )
+  if (options.fill) {
+    ctx.fillStyle = "yellow"
+    ctx.fill()
+  }
+  if (options.strokeColor) {
+    ctx.strokeStyle = options.strokeColor
   }
 
   ctx.stroke()

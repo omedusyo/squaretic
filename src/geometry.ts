@@ -67,7 +67,7 @@ export namespace Vector {
   }
 
   export function toAngle(v: Vector): number {
-    return Math.atan(v.dy/v.dx)
+    return Math.atan2(v.dy,v.dx)
   }
 
   export function normalize(v: Vector): Vector {
