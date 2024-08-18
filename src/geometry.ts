@@ -66,6 +66,10 @@ export namespace Vector {
     return Math.acos(similarity(v, w))
   }
 
+  export function toAngle(v: Vector): number {
+    return Math.atan(v.dy/v.dx)
+  }
+
   export function normalize(v: Vector): Vector {
     return scale(1/magnitude(v), v)
   }
