@@ -67,8 +67,11 @@ export namespace Vector {
   }
 
   export function angle(v: Vector, w: Vector): number {
-    // TODO: Is this correct?
     return Math.acos(similarity(v, w))
+  }
+
+  export function toAngle(v: Vector): number {
+    return Math.atan(v.dy/v.dx)
   }
 
   export function normalize(v: Vector): Vector {
@@ -183,7 +186,7 @@ export namespace LineSegment {
       // The lines determined by the line-segment do intersect.
       const k = -Vector.dot(normal0, Point.sub(ls1.start, ls0.start)) / dot
       const intersection = Point.add(ls1.start, Vector.scale(k, ls1.unit_direction))
-      return contains(ls0, intersection)
+      return contains(ls0, intersection) && contains(ls1, intersection)
     }
   }
 }
