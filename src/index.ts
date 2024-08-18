@@ -248,6 +248,7 @@ function render(state: State) {
 function renderPlayer(ctx: CanvasRenderingContext2D, { body, face }: Player) {
   const playerPolygon = Polygon4.fromRotatedRectangle(body, face) 
 
+  // body
   const rect = new Path2D();
   rect.lineTo(playerPolygon.a.x, playerPolygon.a.y);
   rect.lineTo(playerPolygon.b.x, playerPolygon.b.y);
@@ -257,26 +258,67 @@ function renderPlayer(ctx: CanvasRenderingContext2D, { body, face }: Player) {
   ctx.fillStyle = "green";
   ctx.fill(rect);
 
-  ctx.lineWidth = 4
-  ctx.beginPath()
-  ctx.moveTo(playerPolygon.a.x, playerPolygon.a.y)
-  ctx.lineTo(playerPolygon.b.x, playerPolygon.b.y)
+  // face
+  renderPath(ctx, [playerPolygon.a, playerPolygon.b], 4, "red")
 
-  // Draw the Path
-  ctx.strokeStyle = "red"
+  // sword
+  ctx.beginPath()
+  const swordLength = 50
+  const swordHandle = playerPolygon.a
+  const swordDirection = Point.add(
+    swordHandle,
+    Vector.rotBy(
+      Vector.scale(
+        swordLength,
+        Vector.normalize(face)), -3*Math.PI/16)
+  )
+  renderPath(ctx, [swordHandle, swordDirection], 2, "gray")
+
+  // sword hit box
+
+  const faceAngle: number = Vector.toAngle(Point.sub(playerPolygon.b, playerPolygon.a))
+  ctx.strokeStyle="yellow"
+  ctx.beginPath()
+  ctx.arc(
+    swordHandle.x,
+    swordHandle.y,
+    swordLength,
+    faceAngle,
+    faceAngle + Math.PI,
+  )
   ctx.stroke()
+  // ctx.beginPath();
+  // ctx.arc(
+  //   swordHandle.x,
+  //   swordHandle.y,
+  //   swordLength,
+  //   faceAngle,
+  //   2 * Math.PI
+  // );
+  // ctx.stroke();
 }
 
 function renderObstacle(ctx: CanvasRenderingContext2D, obstacle: Obstacle) {
-  // Start a new Path
-  ctx.beginPath()
-  ctx.moveTo(obstacle.start.x, obstacle.start.y)
-  ctx.lineTo(obstacle.end.x, obstacle.end.y)
+  renderPath(ctx, [obstacle.start, obstacle.end], 4, "black")
+}
 
-  // Draw the Path
-  ctx.strokeStyle = "gray"
+const defaultLineWidth = 2
+const defaultLineColor = "black"
+function renderPath(ctx: CanvasRenderingContext2D, points: Point[], lineWidth?: number, lineColor?: string) {
+  for (const [i, point] of points.entries()) {
+    if (i === 0) {
+      ctx.lineWidth = lineWidth || defaultLineWidth
+      ctx.strokeStyle = lineColor || defaultLineColor
+      ctx.beginPath()
+      ctx.moveTo(point.x, point.y)
+    } else {
+      ctx.lineTo(point.x, point.y)
+    }
+  }
+
   ctx.stroke()
 }
+
 
 // App
 function handleKeyboardPressedEvent(keyString: string) {

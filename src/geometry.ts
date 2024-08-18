@@ -22,6 +22,10 @@ export namespace Vector {
     return { dx: v.dx + w.dx, dy: v.dy + w.dy }
   }
 
+  export function toAngle(v: Vector): number {
+    return Vector.angle(Vector.fromPolar(1,0), v)
+  }
+
   export function eq(v: Vector, w: Vector): boolean {
     return Math.abs(v.dx - w.dx) < epsilon && Math.abs(v.dy - w.dy) < epsilon
   }
