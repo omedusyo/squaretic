@@ -1,10 +1,10 @@
 import { runApp } from "./tea.js"
-import { Vector, Point, Rectangle, Polygon4, LineSegment } from "./geometry.js"
+import { Vector, Point, DirectedPoint, Rectangle, Polygon4, LineSegment } from "./geometry.js"
 
 // app config
 const config = {
   canvas: { widthPx: 1000, heightPx: 800 },
-  playerVelocity: 1/1000 * 400,
+  playerVelocity: 1/1000 * 300,
   debug: true,
   planckTime: 4, // ms
 }
@@ -42,17 +42,24 @@ type State = {
   player: Player,
   obstacles: Obstacle[],
   keyboard: Keyboard,
+  mouse: Point,
 }
 
+const initPlayerPosition: Point = { x:500, y:700 }
+const initMousePosition: Point = Point.add(initPlayerPosition,Vector.fromCartesian(0,-1))
 const initState: State = {
   player: {
-    body: Rectangle.createSquare({x:500, y:700, width:50}),
-    face: Vector.fromCartesian(0,-1),
+    body: Rectangle.createSquare({...initPlayerPosition, width:50}),
+    face: Point.sub(initMousePosition, initPlayerPosition)
   }, 
   obstacles: [ 
     LineSegment.from(
       { x: 0, y: config.canvas.heightPx },
       { x: config.canvas.widthPx, y: config.canvas.heightPx }
+    ),
+    LineSegment.from(
+      { x: 100, y: 100 },
+      { x: 200, y: 100 }
     )
   ],
   keyboard: {
@@ -60,7 +67,8 @@ const initState: State = {
     down_pressed: false,
     left_pressed: false,
     right_pressed: false,
-  }
+  },
+  mouse: initMousePosition
 }
 
 type Player =  {
@@ -106,11 +114,11 @@ function update(state: State, action:Action): State {
       }
 
     case "mouse_moved":
-      return {...state,
-        player: {...state.player,
-          face: Point.sub(action.point, state.player.body.center)
-        }
+      return {
+        ...state,
+        mouse: action.point,
       }
+
     case "tick":
       const planckTimesPassed =  Math.floor(action.dt / config.planckTime)
 
@@ -124,47 +132,66 @@ function update(state: State, action:Action): State {
 }
 
 function step(state:State, dt: number): State {
+  const newDirectedPoint = moveDirectedPoint(
+    Vector.scale(dt * config.playerVelocity, keyboardToVector(state.keyboard)),
+    Point.sub(state.mouse, state.player.body.center),
+    (directedPoint: DirectedPoint) => state.obstacles.filter(obstacle =>
+      Polygon4.intersectsLineSegment(
+        Polygon4.fromRotatedRectangle(
+          { size: state.player.body.size,
+            center: directedPoint.point,
+          },
+          directedPoint.direction,
+        ),
+        obstacle,
+      )
+    ).length >= 1,
+    { point: state.player.body.center,
+      direction: state.player.face,
+    },
+    true,
+  )
+
   return {
     ...state,
     player: {
-      face: state.player.face,
+      face: newDirectedPoint.direction,
       body: {
         size: state.player.body.size,
-        center: 
-          movePlayer(
-            Vector.scale(dt * config.playerVelocity, keyboardToVector(state.keyboard)),
-            (point) => state.obstacles.filter(obstacle =>
-              Polygon4.intersectsLineSegment(
-                Polygon4.fromRotatedRectangle(
-                  { size: state.player.body.size,
-                    center: point,
-                  },
-                  state.player.face,
-                ),
-                obstacle,
-              )
-            ).length >= 1,
-            state.player.body.center,
-            true,
-          )
+        center: newDirectedPoint.point,
       }
     }
   }
 }
 
 const planckSpace = 0.1 // px
-function movePlayer(direction: Vector, doesCollide: (point: Point) => boolean, point: Point, isFirstCall?: boolean): Point {
-  if (Vector.magnitude(direction) < planckSpace) { return point }
+function moveDirectedPoint(
+  translation: Vector,
+  direction: Vector,
+  doesCollide: (directedPoint: DirectedPoint) => boolean,
+  directedPoint: DirectedPoint,
+  isFirstCall?: boolean
+): DirectedPoint 
+{
+  if (
+    Vector.magnitude(translation) < planckSpace &&
+    Vector.eq(direction, directedPoint.direction)
+  ) {
+    return directedPoint
+  }
 
-  const newPoint = Point.add(point, direction)
+  const newDirectedPoint = {
+    point: Point.add(directedPoint.point, translation),
+    direction: direction, 
+  }
 
-  if (doesCollide(newPoint)) {
-    return movePlayer(Vector.scale(0.5, direction), doesCollide, point, false)
+  if (doesCollide(newDirectedPoint)) {
+    return moveDirectedPoint(Vector.scale(0.5, translation), directedPoint.direction, doesCollide, directedPoint, false)
   } else {
     if (isFirstCall) {
-      return newPoint
+      return newDirectedPoint
     } else {
-      return movePlayer(Vector.scale(0.5, direction), doesCollide, newPoint, false)
+      return moveDirectedPoint(Vector.scale(0.5, translation), direction, doesCollide, newDirectedPoint, false)
     }
   }
 }
@@ -230,7 +257,14 @@ function renderPlayer(ctx: CanvasRenderingContext2D, { body, face }: Player) {
   ctx.fillStyle = "green";
   ctx.fill(rect);
 
-  // ctx.fillRect(body.position.x, body.position.y, body.width, body.height)
+  ctx.lineWidth = 4
+  ctx.beginPath()
+  ctx.moveTo(playerPolygon.a.x, playerPolygon.a.y)
+  ctx.lineTo(playerPolygon.b.x, playerPolygon.b.y)
+
+  // Draw the Path
+  ctx.strokeStyle = "red"
+  ctx.stroke()
 }
 
 function renderObstacle(ctx: CanvasRenderingContext2D, obstacle: Obstacle) {
@@ -240,7 +274,7 @@ function renderObstacle(ctx: CanvasRenderingContext2D, obstacle: Obstacle) {
   ctx.lineTo(obstacle.end.x, obstacle.end.y)
 
   // Draw the Path
-  ctx.strokeStyle = "red"
+  ctx.strokeStyle = "gray"
   ctx.stroke()
 }
 

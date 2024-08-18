@@ -1,4 +1,5 @@
 export type Point = { x: number, y: number }
+export type DirectedPoint = { point: Point, direction: Vector }
 export type Vector = { dx: number, dy: number }
 export type Rectangle = { center: Point, size: { width: number, height: number } }
 export type Polygon4 = { a: Point, b: Point, c: Point, d: Point }
@@ -19,6 +20,14 @@ export namespace Vector {
 
   export function add(v: Vector, w: Vector): Vector {
     return { dx: v.dx + w.dx, dy: v.dy + w.dy }
+  }
+
+  export function eq(v: Vector, w: Vector): boolean {
+    return Math.abs(v.dx - w.dx) < epsilon && Math.abs(v.dy - w.dy) < epsilon
+  }
+
+  export function literallyEq(v: Vector, w: Vector): boolean {
+    return v.dx === w.dx && v.dy === w.dy
   }
 
   export function sum(vs: Vector[]): Vector {
