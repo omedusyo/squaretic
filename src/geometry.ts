@@ -4,6 +4,7 @@ export type Vector = { dx: number, dy: number }
 export type Rectangle = { center: Point, size: { width: number, height: number } }
 export type Polygon4 = { a: Point, b: Point, c: Point, d: Point }
 export type OrthogonalSplit = { projection: Vector, rejection: Vector }
+export type Circle = { radius: number, center: Point }
 
 const epsilon = 0.00001
 
@@ -48,6 +49,10 @@ export namespace Vector {
 
   export function dot(v: Vector, w: Vector): number {
     return v.dx*w.dx + v.dy*w.dy
+  }
+
+  export function square(v: Vector): number {
+    return v.dx**2 + v.dy**2
   }
 
   export function magnitude(v: Vector): number {
@@ -222,5 +227,37 @@ export namespace Polygon4 {
     ]
 
     return faces.some(face => LineSegment.intersects(face, ls))
+  }
+}
+
+export namespace Circle {
+  export function make(radius: number, center: Point) {
+    return { radius, center }
+  }
+
+  export function contains(circle: Circle, point: Point): boolean {
+    return Math.abs((circle.center.x - point.x)**2 + (circle.center.y - point.y)**2 - circle.radius**2) < epsilon
+  }
+
+  export function intersectsLineSegment(circle: Circle, ls: LineSegment): boolean {
+    const v = Point.sub(ls.end, ls.start)
+    const c = Vector.square(Point.sub(circle.center, ls.start)) - circle.radius**2
+    const b = 2*Vector.dot(Point.sub(circle.center, ls.start), v)
+    const a = Vector.square(v)
+
+    const D = b**2 - 4*a*c
+    if (D < 0) {
+      return false
+    }
+    const [k0, k1] = quadraticRealEqSolve(a, b, c, D)
+    const p0 = Point.add(ls.start, Vector.scale(k0, v))
+    const p1 = Point.add(ls.start, Vector.scale(k1, v))
+    return LineSegment.contains(ls, p0) && LineSegment.contains(ls, p1)
+  }
+
+  // a*x^2 + b*x + c == i0
+  function quadraticRealEqSolve(a: number, b: number, c: number, D: number): [number, number] {
+    const sqrtD = D**0.5
+    return [(-b + sqrtD)/(2*a), (-b - sqrtD)/(2*a)]
   }
 }
