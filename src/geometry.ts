@@ -245,7 +245,7 @@ export namespace Circle {
   export function intersectsLineSegment(circle: Circle, ls: LineSegment): boolean {
     const v = Point.sub(ls.end, ls.start)
     const c = Vector.square(Point.sub(circle.center, ls.start)) - circle.radius**2
-    const b = 2*Vector.dot(Point.sub(circle.center, ls.start), v)
+    const b = -2*Vector.dot(Point.sub(circle.center, ls.start), v)
     const a = Vector.square(v)
 
     const D = b**2 - 4*a*c
@@ -255,7 +255,7 @@ export namespace Circle {
     const [k0, k1] = quadraticRealEqSolve(a, b, c, D)
     const p0 = Point.add(ls.start, Vector.scale(k0, v))
     const p1 = Point.add(ls.start, Vector.scale(k1, v))
-    return LineSegment.contains(ls, p0) && LineSegment.contains(ls, p1)
+    return LineSegment.contains(ls, p0) || LineSegment.contains(ls, p1)
   }
 
   // a*x^2 + b*x + c == i0
