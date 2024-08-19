@@ -209,7 +209,7 @@ function step(state:State, dt: number): State {
     newEnemies = state.enemies.filter(enemy => {
       const enemyLineSegments = Polygon4.toLineSegments(Polygon4.fromRotatedRectangle(enemy.body, enemy.face))
 
-      return enemyLineSegments.every(ls => !Circle.intersectsLineSegment( attackCircle, ls)) 
+      return enemyLineSegments.every(ls => !Circle.intersectsLineSegment( attackCircle, ls )) 
     })
   }
 
