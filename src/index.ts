@@ -1,10 +1,12 @@
 import { runApp } from "./tea.js"
-import { Vector, Point, DirectedPoint, Rectangle, Polygon4, LineSegment } from "./geometry.js"
+import { Vector, Point, DirectedPoint, Rectangle, Polygon4, LineSegment, Circle } from "./geometry.js"
+import { debug } from "./utils.js"
 
 // app config
 const config = {
   canvas: { widthPx: 1000, heightPx: 800 },
   playerVelocity: 1/1000 * 300,
+  playerAttackTime: 100, // ms
   debug: true,
   planckTime: 4, // ms
 }
@@ -41,17 +43,51 @@ function decodeKey(key: string): Key | null {
 type State = {
   player: Player,
   obstacles: Obstacle[],
+  enemies: Enemy[],
   keyboard: Keyboard,
   mouse: Point,
 }
 
+type Player =  {
+  body: Rectangle,
+  face: Vector,
+  attacking: null | number,
+}
+
+type Enemy =  {
+  body: Rectangle,
+  face: Vector,
+}
+
+type Obstacle = LineSegment
+
+
+type Keyboard = {
+  up_pressed: boolean,
+  down_pressed: boolean,
+  left_pressed: boolean,
+  right_pressed: boolean,
+}
+
 const initPlayerPosition: Point = { x:500, y:700 }
 const initMousePosition: Point = Point.add(initPlayerPosition,Vector.fromCartesian(0,-1))
+
+function basicEnemey (point: Point): Enemy {
+  return {
+    body: { center: point, size: { width: 50, height: 50} },
+    face: Vector.fromCartesian(0,1)
+  }
+}
+
 const initState: State = {
   player: {
     body: Rectangle.createSquare({...initPlayerPosition, width:50}),
-    face: Point.sub(initMousePosition, initPlayerPosition)
+    face: Point.sub(initMousePosition, initPlayerPosition),
+    attacking: null,
   }, 
+  enemies: [
+    basicEnemey({ x: 500, y: 500}),
+  ],
   obstacles: [ 
     LineSegment.from(
       { x: 0, y: config.canvas.heightPx },
@@ -71,25 +107,12 @@ const initState: State = {
   mouse: initMousePosition
 }
 
-type Player =  {
-  body: Rectangle,
-  face: Vector,
-}
-
-type Obstacle = LineSegment
-
-type Keyboard = {
-  up_pressed: boolean,
-  down_pressed: boolean,
-  left_pressed: boolean,
-  right_pressed: boolean,
-}
-
 // Actions
 type Action
   = { kind: "key_pressed", key: Key }
   | { kind: "key_released", key: Key }
   | { kind: "mouse_moved", point: Point }
+  | { kind: "mouse_up" }
   | { kind: "tick", dt: number }
 
 // Update
@@ -117,6 +140,12 @@ function update(state: State, action:Action): State {
       return {
         ...state,
         mouse: action.point,
+      }
+
+    case "mouse_up":
+      return {
+        ...state,
+        player: {...state.player, attacking: 0 }
       }
 
     case "tick":
@@ -152,15 +181,42 @@ function step(state:State, dt: number): State {
     true,
   )
 
-  return {
-    ...state,
-    player: {
+  let newAttacking = null
+  if (state.player.attacking !== null) {
+    newAttacking = state.player.attacking + dt
+    if (newAttacking > config.playerAttackTime) {
+      newAttacking = null
+
+    }
+  }
+
+  const newPlayer = {
       face: newDirectedPoint.direction,
       body: {
         size: state.player.body.size,
         center: newDirectedPoint.point,
-      }
+      },
+      attacking: newAttacking,
     }
+
+
+  let newEnemies = state.enemies
+  if (newAttacking !== null) {
+    const playerPolygon = Polygon4.fromRotatedRectangle(newPlayer.body, newPlayer.face)
+    const { center, startVector } = attackCircleParams(playerPolygon)
+    const attackCircle = Circle.make(Vector.magnitude(startVector), center)
+
+    newEnemies = state.enemies.filter(enemy => {
+      const enemyLineSegments = Polygon4.toLineSegments(Polygon4.fromRotatedRectangle(enemy.body, enemy.face))
+
+      return enemyLineSegments.every(ls => !Circle.intersectsLineSegment( attackCircle, ls)) 
+    })
+  }
+
+  return {
+    ...state,
+    player: newPlayer,
+    enemies: newEnemies
   }
 }
 
@@ -239,43 +295,74 @@ function render(state: State) {
 
     renderPlayer(ctx, state.player)
     state.obstacles.forEach(o => renderObstacle(ctx, o))
+    state.enemies.forEach(e => renderEnemies(ctx, e))
 
   } else {
     console.error("getContext returned null")
   }
 }
 
-function renderPlayer(ctx: CanvasRenderingContext2D, { body, face }: Player) {
+const swordLength = 50
+function renderPlayer(ctx: CanvasRenderingContext2D, player: Player) {
+  const { body, face, attacking } = player
   const playerPolygon = Polygon4.fromRotatedRectangle(body, face) 
 
   // body
-  const rect = new Path2D();
-  rect.lineTo(playerPolygon.a.x, playerPolygon.a.y);
-  rect.lineTo(playerPolygon.b.x, playerPolygon.b.y);
-  rect.lineTo(playerPolygon.c.x, playerPolygon.c.y);
-  rect.lineTo(playerPolygon.d.x, playerPolygon.d.y);
-  rect.closePath();
-  ctx.fillStyle = "green";
-  ctx.fill(rect);
+  renderPolygon4(ctx, playerPolygon, "green")
 
   // face
   renderPath(ctx, [playerPolygon.a, playerPolygon.b], 4, "red")
 
+  const { center, startVector } = attackCircleParams(playerPolygon)
   // sword
   ctx.beginPath()
-  const swordLength = 50
-  const swordHandle = playerPolygon.a
   const swordDirection = Point.add(
-    swordHandle,
+    center,
     Vector.rotBy(
       Vector.scale(
         swordLength,
         Vector.normalize(face)), -3*Math.PI/16)
   )
-  renderPath(ctx, [swordHandle, swordDirection], 2, "gray")
+  renderPath(ctx, [center, swordDirection], 2, "gray")
 
   // sword hit box
-  renderArc(ctx, swordHandle, Point.sub(playerPolygon.b, playerPolygon.a), Math.PI, { fill: "yellow", strokeColor: "orange" })
+  if (attacking !== null) {
+    renderArc(ctx, center, startVector, Math.PI, { fill: "yellow", strokeColor: "orange" })
+  }
+}
+
+function attackCircleParams(playerPolygon: Polygon4): { center: Point, startVector: Vector } {
+  const center = playerPolygon.a
+  const startVector = Point.sub(playerPolygon.b, playerPolygon.a)
+
+  return { center, startVector }
+}
+
+function renderEnemies(ctx: CanvasRenderingContext2D, enemy: Enemy) {
+  const { body, face } = enemy
+  const enemyPolygon = Polygon4.fromRotatedRectangle(body, face) 
+
+  renderPolygon4(ctx, enemyPolygon, "red")
+
+  // face
+  renderPath(ctx, [enemyPolygon.a, enemyPolygon.b], 4, "orange")
+}
+
+function renderPolygon4(ctx: CanvasRenderingContext2D, polygon: Polygon4, fillCollor?: string) {
+  // body
+  const rect = new Path2D();
+  rect.lineTo(polygon.a.x, polygon.a.y);
+  rect.lineTo(polygon.b.x, polygon.b.y);
+  rect.lineTo(polygon.c.x, polygon.c.y);
+  rect.lineTo(polygon.d.x, polygon.d.y);
+  rect.closePath();
+  if (fillCollor) {
+    ctx.fillStyle = fillCollor;
+    ctx.fill(rect);
+  }
+
+  // face
+  renderPath(ctx, [polygon.a, polygon.b], 4, "red")
 }
 
 function renderObstacle(ctx: CanvasRenderingContext2D, obstacle: Obstacle) {
@@ -354,6 +441,11 @@ function handleMouseMove(point: Point) {
   triggerAction({ kind: "mouse_moved", point })
 }
 
+function handleMouseDown() {
+  console.log("handleMouseUp")
+  triggerAction({ kind: "mouse_up" })
+}
+
 const triggerAction = runApp(
   initState,
   dt => ({ kind: "tick", dt } as Action),
@@ -369,11 +461,15 @@ document.onkeyup = function(e) {
   handleKeyboardReleasedEvent(e.key)
 }
 
-canvas.onmousemove =  function (e: MouseEvent) {
+document.onmousemove =  function (e: MouseEvent) {
   let rect = canvas.getBoundingClientRect();
   
   handleMouseMove({
     x: e.clientX - rect.left,
     y: e.clientY - rect.top,
   })
+}
+
+document.onmousedown = function() {
+  handleMouseDown()
 }

@@ -218,15 +218,18 @@ export namespace Polygon4 {
     return { a: forwardLeft, b: forwardRight, c: backwardsRight, d: backwardsLeft }
   }
 
-  export function intersectsLineSegment(p: Polygon4, ls: LineSegment): boolean {
-    const faces: LineSegment[] = [
+  export function toLineSegments(p: Polygon4): LineSegment[] {
+    return [
       LineSegment.from(p.a, p.b),
       LineSegment.from(p.b, p.c),
       LineSegment.from(p.c, p.d),
       LineSegment.from(p.d, p.a),
     ]
 
-    return faces.some(face => LineSegment.intersects(face, ls))
+  }
+
+  export function intersectsLineSegment(p: Polygon4, ls: LineSegment): boolean {
+    return Polygon4.toLineSegments(p).some(face => LineSegment.intersects(face, ls))
   }
 }
 
